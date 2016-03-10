@@ -1,0 +1,312 @@
+<html>
+
+<head>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
+	<link href="http://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.1.1/css/bootstrap.css" rel="stylesheet">
+	<link href="style.css" rel="stylesheet">	
+    <script>
+		/***************************************** 
+			TITLE: Connect 4 Game
+			CREATOR: Mary Grace Arrabis
+			DATE: 03/09/16
+		*****************************************/
+		
+		/****************************************** 
+			Global variables 
+		*****************************************/
+		var toogle = 1; 					// used to set the next player
+		var compPlayer = 0;					// used to check if player 2 is a computer
+		var moveCount = 42;					// used to count the remaining moves
+		var winningChipsA = new Array();	// will contain the list of winning chips
+		var chipsA = new Array();			// the list of chips that we need to check
+		
+	 $( document ).ready(function() {
+		//Select a Player
+		$(".btn").click(function() {
+			//Set Coputer as Player 2
+			compPlayer = $(this).val();			
+			if(compPlayer==1) $('#player2').html('Computer');
+			
+			//Hide Player button
+			$('#button_container').css('display', 'none');
+			//Show players
+			$('#player_container').css('display', 'block');
+			//Show Turns
+			$('#turn_container').css('display', 'block');
+			
+			//Create Game Table
+			createTable();
+				
+		});		
+	}); 
+		/************************************************* 
+			This will automatically create the game table
+			All the rows are disabled except the last row
+		***************************************************/
+		function createTable(){
+			$('#game_container').append('<table id="connect4"> </table>');
+			var table = $('#game_container').children();
+			 counter=1;
+			 for(i=6;i>0;i--){
+				content = '';	
+				trclass = 'disable';
+				if(i == 1) trclass = 'enable';			
+				
+				counter = i;
+				for(x=1;x<=7;x++){			  
+					id = counter;			
+					content += '<td id="'+ id +'" style="height:60px, width:60px">';
+					content += '<img id="img_'+ id +'" class="'+ trclass +'" src="0.png" onclick="clickChip('+id+');">';
+					content += '</td>';	
+
+					counter	= counter + 6;				
+				}				
+				table.append( '<tr>' + content + '</tr>' );
+			}		
+		}//endfct
+		
+		/************************************************* 
+			This function will be called upon clicking the chips
+		***************************************************/
+		function clickChip(id){
+			//get the chip id
+			clickVal = "#img_" + id;
+			
+			//if it's disabled, don't do anything
+			status = $(clickVal).attr('class');
+			if(status == 'disable') return false;
+			
+			//replace the image depending on the player who clicked 					
+			$(clickVal).attr('src',toogle+'.png');
+			
+			//enable the next id except if it's the top row 
+			nextid =  parseInt(id) + 1;
+			if(id % 6) $("#img_"+nextid).attr('class','enable');
+			
+			//then disable the current chip so you can't click it again
+			$(clickVal).attr('class','disable');
+			
+			//now get the list of chips to check
+			chipsA	= [];			
+			getchipsA(id);	
+			
+			//check the chips one by one if there's a match
+			for (i = 0; i < chipsA.length; i++) {				
+				eachLine = chipsA[i];			
+				cnt = 0;
+				winningChipsA = [];
+				//loop through the chip to check if it's match
+				for (ii = 0; ii < eachLine.length; ii++) {					
+					if(checkMatch(id,eachLine[ii])) cnt++;
+					else if(cnt < 4) {cnt = 0; winningChipsA = [];}
+				}
+				//if the count is greater than 4, then there's already a winner
+				if(cnt >= 4) {
+					winner();
+					return true;
+				}	
+			
+			}	
+			//if player 2 is a computer, automate chip select
+			if(compPlayer == 1&& toogle == 1) computerPlay();
+			
+			//toogle for the next player
+			toogleNow();
+			
+		}//endfct
+		
+		/************************************************* 
+			This will perform the toogle fro 1 player to another
+			This function will also show the game status
+		***************************************************/
+		function toogleNow(){
+			//decrease the move count
+			moveCount--;
+		
+			if(toogle == 1) {
+				toogle = 2;
+				$('#turn_container').html('<img id="loading" src="loading.gif">');				
+			}
+			else  {
+				toogle = 1;
+				//check the move count
+				if(moveCount == 0){
+					$('#turn_container').html('<div id="turn">DRAW!</div>');
+					newGame();
+					return true;
+				}
+				else if(moveCount < 7) $('#turn_container').html('<div id="turn" style="font-size:45px;text-decoration: blink;";>Last '+moveCount+' moves</div>');				 
+				else $('#turn_container').html('<div id="turn">	Your Turn  </div>');
+			}
+		
+		}//endfct
+		
+		/************************************************* 
+			This function will stimulate player 2 and select a chip
+		***************************************************/
+		function computerPlay(){
+			//set a 1 second gap before selecting the next chip
+			setTimeout(function(){	
+				var available = new Array();
+				//get the list of all enabled chips
+				$.each( $('.enable'), function( key, value ) {
+					availID = $(this).attr('id');
+					availID = parseInt(availID.substring(4));					
+					if(availID != clickVal) available.push(availID);		
+				});
+				//select a random chip from the list
+				var selected = available[Math.floor(Math.random()*available.length)];				
+				clickChip(selected);	
+			}, 1000);
+		}//endfct
+		
+		/************************************************* 
+			This function will check if the chip is atching with the current selected chip			
+		***************************************************/		
+		function checkMatch(a,b){	
+			if($('#img_' + a).attr('src') == $('#img_' + b).attr('src')) {winningChipsA.push(b); return true;}
+			else return false;
+		
+		}//endfct
+		
+		/************************************************* 
+			This function will identify the winner and show the winning chips		
+		***************************************************/	
+		function winner(){		
+			for (i = 0; i < winningChipsA.length; i++) {
+				$('<div id="marker"> x </div>').insertBefore( '#img_'+winningChipsA[i]);
+			}
+		
+			$('#turn_container').html('<div id="win"> HURRAY!!	Player '+toogle+' wins! </div>');
+			$.each( $('.enable'), function( key, value ) {
+				 $(this).attr('class','disable');	
+			});	
+			newGame();
+			return true;
+		}//endfct
+		
+		/************************************************* 
+			This function will show the new game button
+		***************************************************/	
+		function newGame(){
+			$('#new').html('<button id="new_game" type="button" class="btn btn-primary btn-lg btn-block" onclick="window.location.reload();">New Game</button>');
+		}//endfct
+		
+		/************************************************* 
+			This function will get the list of chips to be checked
+		***************************************************/		
+		function getchipsA(id){
+			var y = id % 6;
+			var x = parseInt(id / 6);
+			
+			if(y == 0){ y = 6; x = x - 1}
+						
+			getVertical(x);
+			getHorizontal(y);
+			getLeft(id,y);
+			getRight(id,y);
+		}//endfct
+		
+		/************************************************* 
+			This function will get the vertical chips where the selected chip belongs
+		***************************************************/		
+		function getVertical(x){
+			var vertical = new Array();
+			
+			for (i = 1; i <= 6; i++) {
+				vertical.push((x * 6) + i);			
+			}
+			 chipsA.push(vertical);	
+		}//endfct
+		
+		/************************************************* 
+			This function will get the horizontal chips where the selected chip belongs
+		***************************************************/	
+		function getHorizontal(y){
+			var horizontal = new Array();
+			
+			for (i = 0; i <= 6; i++) {
+				horizontal.push(y + (6 * i));			
+			}	
+			 chipsA.push(horizontal);	
+		}//endfct
+		
+		/************************************************* 
+			This function will get the chips from left down
+		***************************************************/	
+		function getLeft(id,y){
+			var left = new Array();						
+			
+			cn = (id + (6 - y));						
+			for (i = 1; i <=  6 - y ; i++) {
+				if(cn <= 6) cn = cn - 1;
+				else cn = cn - 6;			
+			}	
+			
+			if(cn <= 6) xx = cn;
+			else xx = 8 - parseInt(cn / 6);		
+			
+			for (i = 0; i <= xx-1 ; i++) {
+				left.push(cn + (5 * i));			
+			}
+			chipsA.push(left);				
+		}//endfct
+		
+		/************************************************* 
+			This function will get the chips from right down
+		***************************************************/
+		function getRight(id,y){			
+			var right = new Array();	          	
+			
+			cn = (id + (6 - y));
+
+			for (i = 1; i <=  6 - y ; i++) {
+				if(cn >= 37 ) cn = cn - 1;
+				else cn = cn + 6;		
+			}	
+	
+			if((parseInt(cn / 6) == 6) && (cn % 6)) xx = cn % 6;
+			else xx = parseInt(cn / 6);		
+	
+			for (i = 0; i <= xx-1 ; i++) {
+		
+				right.push(cn - (7 * i));			
+			}
+			 chipsA.push(right);				
+		}//endfct
+		
+	
+   
+    </script>
+</head>
+
+
+<body>
+	
+		<div id="button_container"style="display:block; width: 420px; margin: 100px auto;">
+			<button type="button" class="btn btn-primary btn-lg btn-block" value=0>2 Players</button>
+			<br>
+			<button type="button" class="btn btn-secondary btn-lg btn-block"value=1>Play with Computer</button>
+		</div>
+		
+		<div id="player_container">
+			<div id="player1">	Player 1   </div>
+			<div id="player2">	Player 2   </div>
+		</div>
+		<div id="turn_container" style="display:none;">
+			<div id="turn">	Your Turn   </div>
+		</div>
+		
+		<div id="game_container">
+		</div>
+		
+		<div id="new">
+		
+		</div>
+	
+	
+</body>
+</html>
+
+
+
